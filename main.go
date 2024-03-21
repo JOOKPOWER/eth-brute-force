@@ -2,13 +2,19 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
 	"ethbruteforce/ethbasedclient"
 	"ethbruteforce/ierc20"
+	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	hdwallet "github.com/tinh98/go-ethereum-hdwallet"
-	//"github.com/tyler-smith/go-bip39"
-	"bip44"
+	"github.com/ethereum/go-ethereum/crypto"
+	"math/rand"
+	"os/signal"
+	"sync/atomic"
+	"syscall"
+	"time"
+
 	"log"
 	"math"
 	"math/big"
@@ -18,29 +24,52 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var contagem = 0
+const (
+	POSSIBLE       = "0123456789abcdef"
+	maxConcurrency = 120
+)
+
+var counter = uint64(0)
+var maxCheck = uint64(100_000)
 
 var client *ethbasedclient.EthBasedClient
 var usdtContract *ierc20.IERC20
 
-const rawURL = "https://bsc-dataseed1.binance.org/" //I checking bsc
+const rawURL = "http://202.61.239.89:8545/" //I checking bsc
 
 func main() {
-	defer fmt.Println("total run ", contagem)
+	flag.Uint64Var(&maxCheck, "maxCheck", 100000, "maximum num address check")
+	fmt.Println("maxCheck", maxCheck)
+	chExit := make(chan os.Signal)
+
+	signal.Notify(chExit, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		<-chExit
+		cleanup()
+		os.Exit(0)
+	}()
+
 	var err error
 	client, err = ethbasedclient.NewClient(rawURL)
 	if err != nil {
 		panic(err)
 	}
 
-	usdtContract, _ = ierc20.NewIERC20(common.HexToAddress("0x55d398326f99059ff775485246999027b3197955"), client.Client)
+	usdtContract, _ = ierc20.NewIERC20(common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7"), client.Client)
 
-	pool := gopool.NewPool(12)
+	pool := gopool.NewPool(maxConcurrency)
 	for {
 		pool.Add(1)
 		go func(pool *gopool.GoPool) {
+			//defer func() {
+			//	if err := recover(); err != nil {
+			//		fmt.Println("total run ", counter)
+			//		salvaLog(fmt.Sprintf("total check at %v : %d", time.Now(), counter))
+			//		log.Fatal(err)
+			//	}
+			//}()
 			defer pool.Done()
-			contagem++
 			//fmt.Println("Testado: ", contagem)
 			gerar()
 		}(pool)
@@ -48,86 +77,89 @@ func main() {
 	pool.Wait()
 }
 
+var bitSize = 128
+
 func gerar() {
-	bitSize := 128
-	mnemonic, _ := bip44.NewMnemonic(bitSize)
-	seed, err := mnemonic.NewSeed("") // Here you can choose to pass in the specified password or empty string , Different passwords generate different mnemonics
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	wallet, err := hdwallet.NewFromSeed(seed)
-	if err != nil {
-
-		log.Fatal(err)
-	}
-
-	path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0") // The last digit is the address of the same mnemonic word id, from 0 Start , The same mnemonic can produce unlimited addresses
-	account, err := wallet.Derive(path, false)
-	if err != nil {
-
-		log.Fatal(err)
-	}
+	//mnemonic, _ := bip44.NewMnemonic(bitSize)
+	//seed, err := mnemonic.NewSeed("") // Here you can choose to pass in the specified password or empty string , Different passwords generate different mnemonics
+	//if err != nil {
+	//	log.Fatal(err)
+	//}
+	//
+	//wallet, err := hdwallet.NewFromSeed(seed)
+	//if err != nil {
+	//
+	//	log.Fatal(err)
+	//}
+	//
+	//path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0") // The last digit is the address of the same mnemonic word id, from 0 Start , The same mnemonic can produce unlimited addresses
+	//account, err := wallet.Derive(path, false)
+	//if err != nil {
+	//
+	//	log.Fatal(err)
+	//}
 
 	//TEST
-	//account.Address = common.HexToAddress("0x1c995af606047c4dfA07a1c5E120e57296b04863")
+	privateKey := generateRandomPrivKey()
+	address := generateAddressFromPrivKey(privateKey)
+	//address = "0x95222290dd7278aa3ddd389cc1e1d165cc4bafe5"
 
-	address := account.Address.Hex()
-	privateKey, _ := wallet.PrivateKeyHex(account)
-	publicKey, _ := wallet.PublicKeyHex(account)
+	//address := account.Address.Hex()
+	//privateKey, _ := wallet.PrivateKeyHex(account)
+	//publicKey, _ := wallet.PublicKeyHex(account)
 
-	//fmt.Println("checking ", address)
+	//fmt.Println("checking ", address, atomic.LoadUint64(&counter))
 
-	balance, err := client.Client.BalanceAt(context.Background(), account.Address, nil)
+	balance, err := client.Client.BalanceAt(context.Background(), common.HexToAddress(address), nil)
 	if err != nil {
 		fmt.Println(err)
 	}
 
-	if len(balance.Bits()) == 0 {
-
-	} else {
+	if balance.Cmp(big.NewInt(0)) != 0 {
 		fbalance := new(big.Float)
 		fbalance.SetString(balance.String())
 		ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
 		fmt.Println("address:", address, "Balance ETH:", ethValue)
 		strinvalue := fmt.Sprintf("%f", ethValue)
-		salvaLog(mnemonic.Value)
+		//salvaLog(mnemonic.Value)
 		salvaLog(address)
 		salvaLog(privateKey)
-		salvaLog(publicKey)
-		salvaLog(strinvalue + " BNB")
+		//salvaLog(publicKey)
+		salvaLog(strinvalue + " ETH")
 		salvaLog("-----------------------------------------------------")
 	}
 
-	if balanceFiat, ok := tokenFiat(usdtContract, account.Address); ok {
+	if balanceFiat, ok := tokenFiat(usdtContract, common.HexToAddress(address)); ok {
 		fbalance := new(big.Float)
 		fbalance.SetString(balanceFiat.String())
-		ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+		ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(6)))
 		strinvalue := fmt.Sprintf("%f", ethValue)
-		salvaLog(mnemonic.Value)
+		//salvaLog(mnemonic.Value)
 		salvaLog(address)
 		salvaLog(privateKey)
-		salvaLog(publicKey)
+		//salvaLog(publicKey)
 		salvaLog(strinvalue + " USDT")
 		salvaLog("-----------------------------------------------------")
 	}
+	atomic.AddUint64(&counter, 1)
+	if counter >= maxCheck {
+		panic("DONE")
+	}
 }
 
-func tokenFiat(erc20Contract *ierc20.IERC20, account2 common.Address) (*big.Int, bool) {
-	var ok = false
+func tokenFiat(erc20Contract *ierc20.IERC20, account2 common.Address) (_ *big.Int, ok bool) {
 	balance, err := erc20Contract.BalanceOf(&bind.CallOpts{}, account2)
 	if err != nil {
 		fmt.Println(err)
 	}
-	if len(balance.Bits()) == 0 {
-
-	} else {
+	if balance.Cmp(big.NewInt(0)) != 0 {
 		ok = true
 		fbalance := new(big.Float)
 		fbalance.SetString(balance.String())
-		ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(18)))
+		ethValue := new(big.Float).Quo(fbalance, big.NewFloat(math.Pow10(6)))
 		fmt.Println("address: ", account2, "Balance: USDT: ", ethValue)
 	}
+
 	return balance, ok
 }
 
@@ -142,4 +174,37 @@ func salvaLog(texto string) {
 	if err := f.Close(); err != nil {
 		log.Fatal(err)
 	}
+}
+func generateRandomPrivKey() string {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	var randHex string
+
+	for c := 0; c < 64; c++ {
+		n := r.Intn(16)
+		randHex += string(POSSIBLE[n])
+	}
+
+	return randHex
+}
+
+func generateAddressFromPrivKey(hex string) string {
+	privateKey, err := crypto.HexToECDSA(hex)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("cannot assert type: publicKey is not of type *ecdsa.PublicKey")
+	}
+
+	address := crypto.PubkeyToAddress(*publicKeyECDSA).Hex()
+	return address
+}
+
+func cleanup() {
+	fmt.Println("Total addresses:", atomic.LoadUint64(&counter))
+	salvaLog(fmt.Sprintf("total addresses check at %v : %d", time.Now(), atomic.LoadUint64(&counter)))
 }
