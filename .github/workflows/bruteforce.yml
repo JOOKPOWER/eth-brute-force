@@ -3,6 +3,10 @@
 
 name: brute_force_eth
 
+permissions:
+  contents: "write"
+  pull-requests: "write"
+
 on:
   # run automatically every 10 minute
   schedule:
