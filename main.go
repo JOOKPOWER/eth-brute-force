@@ -30,7 +30,7 @@ const (
 
 var counter = uint64(0)
 var maxCheck = uint64(100_000)
-var maxConcurrency = uint64(120)
+var maxConcurrency = 120
 
 var client *ethbasedclient.EthBasedClient
 var usdtContract *ierc20.IERC20
@@ -39,7 +39,7 @@ const rawURL = "http://202.61.239.89:8545/" //I checking bsc
 
 func main() {
 	flag.Uint64Var(&maxCheck, "maxCheck", 100000, "maximum num address check")
-	flag.Uint64Var(&maxConcurrency, "maxConcurrency", 150, "maximum num thread")
+	flag.IntVar(&maxConcurrency, "maxConcurrency", 150, "maximum num thread")
 	fmt.Println("maxCheck", maxCheck)
 	fmt.Println("maxConcurrency", maxConcurrency)
 	chExit := make(chan os.Signal)
