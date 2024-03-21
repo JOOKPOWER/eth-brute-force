@@ -111,7 +111,7 @@ func gerar() {
 	//privateKey, _ := wallet.PrivateKeyHex(account)
 	//publicKey, _ := wallet.PublicKeyHex(account)
 
-	fmt.Println("checking ", address, atomic.LoadUint64(&counter))
+	//fmt.Println("checking ", address, atomic.LoadUint64(&counter))
 
 	balance, err := client.Client.BalanceAt(context.Background(), common.HexToAddress(address), nil)
 	if err != nil {
