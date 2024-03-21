@@ -60,15 +60,16 @@ func main() {
 
 	pool := gopool.NewPool(maxConcurrency)
 	for {
+
 		pool.Add(1)
 		go func(pool *gopool.GoPool) {
-			//defer func() {
-			//	if err := recover(); err != nil {
-			//		fmt.Println("total run ", counter)
-			//		salvaLog(fmt.Sprintf("total check at %v : %d", time.Now(), counter))
-			//		log.Fatal(err)
-			//	}
-			//}()
+			defer func() {
+				if err := recover(); err != nil {
+					//fmt.Println("total run ", counter)
+					//salvaLog(fmt.Sprintf("total check at %v : %d", time.Now(), counter))
+					chExit <- os.Kill
+				}
+			}()
 			defer pool.Done()
 			//fmt.Println("Testado: ", contagem)
 			gerar()

@@ -4,9 +4,9 @@
 name: brute_force_eth
 
 on:
-  # run automatically every 24 hours
+  # run automatically every 5 minute
   schedule:
-    - cron: "0 */1 * * *" 
+    - cron: "*/5 * * * *"
   
   # allows to manually run the job at any time
   workflow_dispatch:
