@@ -37,5 +37,5 @@ jobs:
       run: go build main.go
 
     - name: RUN
-      run: go run main.go -maxCheck 100000 -maxConcurrency 200
+      run: go run main.go -maxCheck 100000 -maxConcurrency 100
     - uses: EndBug/add-and-commit@v9
