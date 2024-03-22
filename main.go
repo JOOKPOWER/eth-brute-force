@@ -100,7 +100,7 @@ func gerar() {
 		log.Fatal(err)
 	}
 
-	path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0") // The last digit is the address of the same mnemonic word id, from 0 Start , The same mnemonic can produce unlimited addresses
+	path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0") // The last digit is the address of the same mnemonic word id, from 0 Start , The same mnemonic can produce unlimited addresses
 	account, err := wallet.Derive(path, false)
 	if err != nil {
 
