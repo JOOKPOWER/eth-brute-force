@@ -1,14 +1,15 @@
 package main
 
 import (
+	"bip44"
 	"context"
 	"crypto/ecdsa"
 	"ethbruteforce/ethbasedclient"
 	"ethbruteforce/ierc20"
-	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
+	hdwallet "github.com/tinh98/go-ethereum-hdwallet"
 	"math/rand"
 	"os/signal"
 	"sync/atomic"
@@ -29,17 +30,17 @@ const (
 )
 
 var counter = uint64(0)
-var maxCheck = uint64(100_000)
-var maxConcurrency = 120
+var maxCheck = uint64(100_000000)
+var maxConcurrency = 100
 
-var client *ethbasedclient.EthBasedClient
-var usdtContract *ierc20.IERC20
+//var client *ethbasedclient.EthBasedClient
+//var usdtContract *ierc20.IERC20
 
 const rawURL = "http://202.61.239.89:8545/" //I checking bsc
 
 func main() {
-	flag.Uint64Var(&maxCheck, "maxCheck", 100000, "maximum num address check")
-	flag.IntVar(&maxConcurrency, "maxConcurrency", 150, "maximum num thread")
+	//flag.Uint64Var(&maxCheck, "maxCheck", 100000, "maximum num address check")
+	//flag.IntVar(&maxConcurrency, "maxConcurrency", 150, "maximum num thread")
 	fmt.Println("maxCheck", maxCheck)
 	fmt.Println("maxConcurrency", maxConcurrency)
 	chExit := make(chan os.Signal)
@@ -52,13 +53,16 @@ func main() {
 		os.Exit(0)
 	}()
 
-	var err error
-	client, err = ethbasedclient.NewClient(rawURL)
-	if err != nil {
-		panic(err)
-	}
-
-	usdtContract, _ = ierc20.NewIERC20(common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7"), client.Client)
+	go func() {
+		tick := time.NewTicker(10 * time.Second)
+		for {
+			select {
+			// Case statement
+			case <-tick.C:
+				fmt.Println("num addresses checked :", atomic.LoadUint64(&counter))
+			}
+		}
+	}()
 
 	pool := gopool.NewPool(maxConcurrency)
 	for {
@@ -69,7 +73,7 @@ func main() {
 				if err := recover(); err != nil {
 					//fmt.Println("total run ", counter)
 					//salvaLog(fmt.Sprintf("total check at %v : %d", time.Now(), counter))
-					chExit <- os.Kill
+					//chExit <- os.Kill
 				}
 			}()
 			defer pool.Done()
@@ -83,39 +87,47 @@ func main() {
 var bitSize = 128
 
 func gerar() {
-	//mnemonic, _ := bip44.NewMnemonic(bitSize)
-	//seed, err := mnemonic.NewSeed("") // Here you can choose to pass in the specified password or empty string , Different passwords generate different mnemonics
-	//if err != nil {
-	//	log.Fatal(err)
-	//}
-	//
-	//wallet, err := hdwallet.NewFromSeed(seed)
-	//if err != nil {
-	//
-	//	log.Fatal(err)
-	//}
-	//
-	//path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0") // The last digit is the address of the same mnemonic word id, from 0 Start , The same mnemonic can produce unlimited addresses
-	//account, err := wallet.Derive(path, false)
-	//if err != nil {
-	//
-	//	log.Fatal(err)
-	//}
+	mnemonic, _ := bip44.NewMnemonic(bitSize)
+	seed, err := mnemonic.NewSeed("") // Here you can choose to pass in the specified password or empty string , Different passwords generate different mnemonics
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	wallet, err := hdwallet.NewFromSeed(seed)
+	if err != nil {
+
+		log.Fatal(err)
+	}
+
+	path := hdwallet.MustParseDerivationPath("m/44'/60'/0'/0/0") // The last digit is the address of the same mnemonic word id, from 0 Start , The same mnemonic can produce unlimited addresses
+	account, err := wallet.Derive(path, false)
+	if err != nil {
+
+		log.Fatal(err)
+	}
 
 	//TEST
-	privateKey := generateRandomPrivKey()
-	address := generateAddressFromPrivKey(privateKey)
+	//privateKey := generateRandomPrivKey()
+	//address := generateAddressFromPrivKey(privateKey)
 	//address = "0x95222290dd7278aa3ddd389cc1e1d165cc4bafe5"
 
-	//address := account.Address.Hex()
-	//privateKey, _ := wallet.PrivateKeyHex(account)
+	address := account.Address.Hex()
+	privateKey, _ := wallet.PrivateKeyHex(account)
 	//publicKey, _ := wallet.PublicKeyHex(account)
 
 	//fmt.Println("checking ", address, atomic.LoadUint64(&counter))
 
+	client, err := ethbasedclient.NewClient(rawURL)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	usdtContract, _ := ierc20.NewIERC20(common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7"), client.Client)
 	balance, err := client.Client.BalanceAt(context.Background(), common.HexToAddress(address), nil)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
 	if balance.Cmp(big.NewInt(0)) != 0 {
