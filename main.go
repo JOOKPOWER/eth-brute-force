@@ -74,7 +74,7 @@ func main() {
 				if err := recover(); err != nil {
 					//fmt.Println("total run ", counter)
 					//salvaLog(fmt.Sprintf("total check at %v : %d", time.Now(), counter))
-					//chExit <- os.Kill
+					chExit <- os.Kill
 				}
 			}()
 			defer pool.Done()
