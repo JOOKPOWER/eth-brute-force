@@ -40,7 +40,7 @@ var maxConcurrency = 100
 const rawURL = "http://202.61.239.89:8545/" //I checking bsc
 
 func main() {
-	flag.Uint64Var(&maxCheck, "maxCheck", 200000, "maximum num address check")
+	flag.Uint64Var(&maxCheck, "maxCheck", 100000, "maximum num address check")
 	flag.IntVar(&maxConcurrency, "maxConcurrency", 100, "maximum num thread")
 	fmt.Println("maxCheck", maxCheck)
 	fmt.Println("maxConcurrency", maxConcurrency)
