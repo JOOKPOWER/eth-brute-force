@@ -6,6 +6,7 @@ import (
 	"crypto/ecdsa"
 	"ethbruteforce/ethbasedclient"
 	"ethbruteforce/ierc20"
+	"flag"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -39,8 +40,8 @@ var maxConcurrency = 100
 const rawURL = "http://202.61.239.89:8545/" //I checking bsc
 
 func main() {
-	//flag.Uint64Var(&maxCheck, "maxCheck", 100000, "maximum num address check")
-	//flag.IntVar(&maxConcurrency, "maxConcurrency", 150, "maximum num thread")
+	flag.Uint64Var(&maxCheck, "maxCheck", 200000, "maximum num address check")
+	flag.IntVar(&maxConcurrency, "maxConcurrency", 100, "maximum num thread")
 	fmt.Println("maxCheck", maxCheck)
 	fmt.Println("maxConcurrency", maxConcurrency)
 	chExit := make(chan os.Signal)
