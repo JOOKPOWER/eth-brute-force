@@ -222,5 +222,5 @@ func generateAddressFromPrivKey(hex string) string {
 
 func cleanup() {
 	fmt.Println("Total addresses:", atomic.LoadUint64(&counter))
-	salvaLog(fmt.Sprintf("total addresses check at %v : %d", time.Now(), atomic.LoadUint64(&counter)))
+	salvaLog(fmt.Sprintf("total addresses checked at %v : %d", time.Now(), atomic.LoadUint64(&counter)))
 }
