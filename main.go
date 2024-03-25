@@ -124,7 +124,6 @@ func gerar() {
 		return
 	}
 
-	usdtContract, _ := ierc20.NewIERC20(common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7"), client.Client)
 	balance, err := client.Client.BalanceAt(context.Background(), common.HexToAddress(address), nil)
 	if err != nil {
 		fmt.Println(err)
@@ -145,6 +144,8 @@ func gerar() {
 		salvaLog("-----------------------------------------------------")
 	}
 
+	//check fiat
+	usdtContract, _ := ierc20.NewIERC20(common.HexToAddress("0xdac17f958d2ee523a2206206994597c13d831ec7"), client.Client)
 	if balanceFiat, ok := tokenFiat(usdtContract, common.HexToAddress(address)); ok {
 		fbalance := new(big.Float)
 		fbalance.SetString(balanceFiat.String())
@@ -223,4 +224,7 @@ func generateAddressFromPrivKey(hex string) string {
 func cleanup() {
 	fmt.Println("Total addresses:", atomic.LoadUint64(&counter))
 	salvaLog(fmt.Sprintf("total addresses checked at %v : %d", time.Now(), atomic.LoadUint64(&counter)))
+}
+
+func noti() {
 }
